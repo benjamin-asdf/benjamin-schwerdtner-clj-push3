@@ -50,7 +50,7 @@
 #_(def ^:dynamic *opts* {:fhrr/dimensions 512})
 (def ^:dynamic *opts* {:fhrr/dimensions (long 1e4)})
 
-(defn dimenions [] (:fhrr/dimensions *opts*))
+(defn dimensions [] (:fhrr/dimensions *opts*))
 
 (defn zeroes
   ([] (zeroes 1))
@@ -337,7 +337,6 @@
    (similarity (seed) (seed))
    (squeeze)
    (item)))
-
 
 ;; (def ⊗ bind)
 ;; (def ⊘ unbind)

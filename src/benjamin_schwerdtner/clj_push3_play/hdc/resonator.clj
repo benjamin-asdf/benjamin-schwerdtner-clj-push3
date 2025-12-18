@@ -126,12 +126,12 @@
 (def resonator-defaults
   {:phasor-projection
      ;; set the mag of all vector elements to 1
-     (fn [x] (torch/div x (norm x)))
+   (fn [x] (torch/div x (norm x)))
    :non-linearity
      ;; Quote:
      ;; Our experiments show that a combination of a ReLU and
      ;; polynomial exponent performs best
-     (fn poly [x {:keys [cleanup-k]}]
+   (fn poly [x {:keys [cleanup-k]}]
        ;; the k paramater controls the amount of superposition of
        ;; different possible solutions, i.e. the sparsity
        ;;
@@ -139,7 +139,7 @@
        ;; complete superposition)
        ;; above 1: achieve a stricter cleanup like argmax, or
        ;; winner-take-all for high ks.
-       (torch/pow (F/relu x) cleanup-k))
+     (torch/pow (F/relu x) cleanup-k))
    ;; cleanup-k > 1 didn't do much for me.
    :cleanup-k 1
    :noise-level 0.001
@@ -334,7 +334,7 @@
                   :success? false}
                  :else nil))]
      (loop [{:keys [n-iteration estimates] :as state}
-              {:estimates initial-estimates :n-iteration 0}]
+            {:estimates initial-estimates :n-iteration 0}]
        ;; ------------------------
        (if-let [info (finish-info state)]
          (merge state info)
@@ -347,13 +347,9 @@
 (comment
 
   (do
-    (def books (hd/random [3 10 (hd/dimenions)]))
+    (def books (hd/random [3 10 (hd/dimensions)]))
     (def a (py/get-item books [0 -1]))
     (def b (py/get-item books [1 -1]))
     (def c (py/get-item books [2 -1]))
     (def x (hd/bind [a b c]))
-    (factorize x books))
-
-
-
-  )
+    (factorize x books)))

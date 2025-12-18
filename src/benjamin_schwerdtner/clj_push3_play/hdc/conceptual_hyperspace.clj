@@ -11,7 +11,6 @@
    [libpython-clj2.python :refer [py. py..] :as py]
    [libpython-clj2.require :refer [require-python]]))
 
-
 ;;
 ;; =================================================================
 ;;
@@ -148,13 +147,12 @@
         ;; figure out where.
         high (+ high epsilon 1)
         values
-          (torch/arange low high resolution :device *torch-device*)
+        (torch/arange low high resolution :device *torch-device*)
         basis-seeds (or basis-seeds (hd/seed k))]
     {:basis-seeds basis-seeds
      :books (fpe/fpe basis-seeds values)
      :resolution resolution
      :values values}))
-
 
 (defn encode-point
   "Returns a hdv representing the concept `P` given by domain point `p`.
@@ -295,8 +293,6 @@
   ;;
   ;; ------------
   )
-
-
 ;; Solving a Property-based Analogy
 
 ;; compare semantic relationship between categories and properties
@@ -309,7 +305,7 @@
 
 ;; 1. identify property dimensions that correspond to concept or property B
 ;;    RED, color domain
-;; 2. find the location within that dimenions closes to prototype location C.
+;; 2. find the location within that dimension closest to prototype location C.
 ;;    Would be color domain dimensions for BANANA (i.e. YELLOW)
 ;;
 
@@ -372,11 +368,6 @@
     ;; X is yellow
     (hd/similarity yellow (property-based-mapping apple red banana))))
 
-
-
-
-
-
 ;; ---------------------------
 
 (comment
@@ -389,7 +380,6 @@
         [res (vec (py.. (:books B) (size)))
          (:success? (resonator/factorize b (:books B)))
          (vec (py.. (decode b B) (tolist)))]))
-
 
   '([0.1 [3 211 10000] true [10.0 2.200000047683716 9.0]]
     [0.2 [3 106 10000] true [10.0 2.200000047683716 9.0]]

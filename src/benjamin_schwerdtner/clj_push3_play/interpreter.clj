@@ -37,14 +37,14 @@
   (->
    (if
        ;; When the name-quoted flag is set, a identifier is pushed onto the NAME stack
-       (::name-quoted? state)
-       (stack/push state :push/name identifier)
+    (::name-quoted? state)
+     (stack/push state :push/name identifier)
 
-       (if-let [v (get state :bindings identifier)]
+     (if-let [v (get state :bindings identifier)]
          ;; the bound value is pushed to the exec stack
-         (stack/push state :push/exec v)
+       (stack/push state :push/exec v)
          ;; if the identifier was not encountered before, push it on the NAME stack
-         (stack/push state :push/name identifier)))
+       (stack/push state :push/name identifier)))
 
    (assoc ::name-quoted? false)))
 
@@ -55,7 +55,6 @@
   :doc "The next name is pushed on the NAME stack, regardless of whether it is bound or not.
 Presumably for redefinition."
   :f (fn [state] (assoc state ::name-quoted? true))})
-
 
 ;; using the Push EXEC stack for recursion, inside Push
 
@@ -75,7 +74,6 @@ Presumably for redefinition."
             ;; every exec pop call is +1 :push/num-executions
             state (update state :push/num-executions (fnil inc 0))
             instruction (instructions/instruction item)]
-        (def state state)
         (cond (not= instruction :no-instruction)
               (instructions/execute-instruction state instruction)
               (name? item) (handle-name state item)
@@ -108,7 +106,6 @@ Presumably for redefinition."
 
   "
 
-
   ([state program] (execute state program {}))
   ([state program {:keys [max-executions]}]
    (let [state (execute-load state program)]
@@ -120,7 +117,6 @@ Presumably for redefinition."
                            :push/exec)))
          state
          (recur (execute-1 state)))))))
-
 
 ;; ---
 
@@ -147,8 +143,5 @@ Presumably for redefinition."
      [:push/vector :push/integer] []
      [:push/vector :push/float] []
      [:push/vector :push/char] []}}))
-
-
-
 
 ;; =============================================================
