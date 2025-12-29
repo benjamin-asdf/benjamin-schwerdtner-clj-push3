@@ -56,7 +56,7 @@
 
   I.e. The worm's parent was starved, learned that environment is harsh; Morphogenesis of offspring worm can react with smaller growth.
 
-  This reaction is an adaptation. 
+  This reaction is an adaptation.
 
   It means that =E= can be adapted to different environments, and the signal for what environment is present can come from epigenetics.
 
@@ -103,7 +103,7 @@ I consider this uncontroversial in the sense of being sane and basically straigh
 ---
 
 Dangerously close to Lamarckism? Darwinism never said you can be one step more dynamic (Baldwin).
-In my view, the essential point of Darwinism is causal contingency. I.e. there are no magic leaps in the world. (Dennett's Sky Hooks).
+In my view, the essential point of Darwinism is causal continuity. I.e. there are no magic leaps in the world. (Dennett's Sky Hooks).
 
 Evolving an algorithm that utilizes differnent information flows - perfectly fine under a Darwinian paradigm.
 
