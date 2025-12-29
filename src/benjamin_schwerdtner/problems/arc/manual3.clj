@@ -7,13 +7,13 @@
    [benjamin-schwerdtner.problems.arc.push :as arc]
    [benjamin-schwerdtner.clj-push3-play.hdc.ssp-grid :refer [encode-grid]]
    [benjamin-schwerdtner.clj-push3-play.hdc.fhrr :as fhrr]
+   [benjamin-schwerdtner.clj-push3-play.arc.instructions]
    [libpython-clj2.require :refer [require-python]]
    [benjamin-schwerdtner.clj-push3-play.hdc.spatial-semantic-pointer :as ssp]
    [libpython-clj2.python :refer [py. py..] :as py]))
 
 (require-python '[torch :as torch]
                 '[torch.nn.functional :as F])
-
 
 ;; --------------------------------------------
 
@@ -39,10 +39,10 @@
                   (1 grid_zeroes)
                   (grid_fill)))
 
-
   '{:test-out
     ({:out [[4 4 4 4 4]]
-      :pair {:input [[4 4 0] [4 0 4] [0 0 4]] :output [[4 4 4 4 4]]}
+      :pair {:input [[4 4 0] [4 0 4] [0 0 4]]
+             :output [[4 4 4 4 4]]}
       :success? true})
     :test-success [true]
     :train-out
@@ -58,12 +58,9 @@
      {:out [[1 1]]
       :pair {:input [[0 0 0] [1 0 0] [0 1 0]] :output [[1 1]]}
       :success? true})
-    :train-success [true true true true]}
-  )
-
+    :train-success [true true true true]})
 
 ;; ---------------------------------------
-
 
 (comment
 
@@ -88,7 +85,6 @@
      grid_filter_color
      (3 3 integer_* grid_zeroes_square)
      (grid_swap grid_fill_with_pattern))))
-
 
 (comment
   (def task (d/read-task "/home/benj/repos/ARC-AGI-2/data/training/4be741c5.json"))
@@ -149,12 +145,10 @@
   (def color-codebook (fhrr/seed 10))
   (defn color-hdv [color] (py/get-item color-codebook color))
 
-
   (arc/run-push-on-grid-1
    (-> task :test first :input)
    ;; --------------------------
-   '(
-     (0
+   '((0
       grid_distinct_colors
       vector_integer_dup
       vector_integer_length
@@ -162,7 +156,6 @@
       integer_swap
       grid_new)
      (vector_integer_pushall)))
-
 
   [(ssp/readout (ssp/query-object
                  (encode-grid grid color-codebook [1 1])
@@ -186,16 +179,37 @@
    [0.5 0.699999988079071]
    [0.5 0.8999999761581421]]
 
+  ;; ==================== Centroid Ordering Solution ====================
+  ;;
+  ;; Using the new grid_colors_by_centroid_x instruction:
+  ;;
+  ;; The Push3 program to solve this task:
+  ;;
+  ;; grid_colors_by_centroid_x_nonzero  ; get [3 2 1 8] - colors sorted by x-centroid
+  ;; vector_integer_length              ; get count (4)
+  ;; 1                                  ; height = 1
+  ;; grid_new                           ; create 1x4 grid
+  ;; ... or use vector_integer_pushall to build the output grid
+  ;;
 
+  ;; Test the centroid functions directly:
+  (grid/color-centroid grid 3)   ;; => left-most centroid
+  (grid/color-centroid grid 2)
+  (grid/color-centroid grid 1)
+  (grid/color-centroid grid 8)   ;; => right-most centroid
 
+  (grid/colors-by-centroid-x grid true) ;; => [3.0 2.0 1.0 8.0] (sorted left to right)
+
+  ;; The Push3 solution:
+  (arc/run-push-on-grid-1
+   (-> task :train first :input)
+   '(grid_colors_by_centroid_x_nonzero
+     (vector_integer_length
+      1
+      integer_swap
+      grid_new)
+     (vector_integer_pushall)))
 
   (fhrr/unbind
    (encode-grid grid color-codebook [1 1])
-   (ssp/spatial-semantic-pointer [0 0]))
-
-
-
-
-
-
-  )
+   (ssp/spatial-semantic-pointer [0 0])))

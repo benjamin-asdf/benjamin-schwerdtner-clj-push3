@@ -911,6 +911,251 @@
    (comp vec #(py.. % tolist))
    (py.. g (to :dtype torch/int))))
 
+;; ==================== Tiling Operations ====================
+
+(defn tile
+  "Tile a pattern to fill a grid of specified dimensions.
+   Pattern is repeated horizontally and vertically."
+  [pattern target-height target-width]
+  (let [[p-height p-width] (shape pattern)
+        ;; Calculate how many times to repeat
+        repeat-y (int (Math/ceil (/ target-height p-height)))
+        repeat-x (int (Math/ceil (/ target-width p-width)))
+        ;; Repeat the pattern
+        tiled (torch/tile pattern [repeat-y repeat-x])]
+    ;; Crop to exact target dimensions
+    (-> tiled
+        (torch/narrow 0 0 target-height)
+        (torch/narrow 1 0 target-width)
+        (py.. clone))))
+
+(defn tile-n
+  "Tile a pattern n times in each direction.
+   Returns a grid n*height by n*width."
+  [pattern n]
+  (let [[h w] (shape pattern)]
+    (tile pattern (* n h) (* n w))))
+
+;; ==================== Bounding Box / Crop Operations ====================
+
+(defn bounding-box
+  "Find the bounding box of non-zero cells in the grid.
+   Returns [min-y min-x max-y max-x] or nil if grid is all zeros."
+  [grid]
+  (let [nonzero-indices (torch/nonzero (torch/ne grid 0))]
+    (when (> (py.. nonzero-indices (size 0)) 0)
+      (let [ys (py/get-item nonzero-indices [(slice nil nil) 0])
+            xs (py/get-item nonzero-indices [(slice nil nil) 1])
+            min-y (py.. (torch/min ys) item)
+            max-y (py.. (torch/max ys) item)
+            min-x (py.. (torch/min xs) item)
+            max-x (py.. (torch/max xs) item)]
+        [(int min-y) (int min-x) (int max-y) (int max-x)]))))
+
+(defn crop-to-content
+  "Crop grid to the minimal bounding box containing non-zero cells.
+   Returns the original grid if all zeros."
+  [grid]
+  (if-let [[min-y min-x max-y max-x] (bounding-box grid)]
+    (let [height (inc (- max-y min-y))
+          width (inc (- max-x min-x))]
+      (-> grid
+          (torch/narrow 0 min-y height)
+          (torch/narrow 1 min-x width)
+          (py.. clone)))
+    grid))
+
+;; ==================== Connected Components ====================
+
+(defn connected-components
+  "Find connected components of non-zero cells using flood fill.
+   Returns a grid where each component has a unique integer label (1, 2, 3...)
+   and background remains 0."
+  [grid]
+  (let [[height width] (shape grid)
+        labels (torch/zeros [height width] :dtype torch/float)
+        visited (atom #{})
+        label-counter (atom 0)
+        directions [[0 1] [0 -1] [1 0] [-1 0]]]
+    ;; BFS flood fill for each unvisited non-zero cell
+    (doseq [y (range height)
+            x (range width)]
+      (let [val (py.. (py/get-item grid [y x]) item)]
+        (when (and (not (zero? val))
+                   (not (contains? @visited [y x])))
+          ;; Start new component
+          (swap! label-counter inc)
+          (let [current-label @label-counter
+                queue (atom [[y x]])]
+            ;; BFS
+            (while (seq @queue)
+              (let [[cy cx] (first @queue)]
+                (swap! queue rest)
+                (when (and (>= cy 0) (< cy height)
+                           (>= cx 0) (< cx width)
+                           (not (contains? @visited [cy cx]))
+                           (not (zero? (py.. (py/get-item grid [cy cx]) item))))
+                  (swap! visited conj [cy cx])
+                  (py/set-item! labels [cy cx] (float current-label))
+                  ;; Add neighbors to queue
+                  (doseq [[dy dx] directions]
+                    (swap! queue conj [(+ cy dy) (+ cx dx)])))))))))
+    labels))
+
+(defn extract-objects
+  "Extract all connected objects from a grid.
+   Returns a vector of {:grid cropped-grid :bbox [min-y min-x max-y max-x] :color dominant-color}."
+  [grid]
+  (let [labels (connected-components grid)
+        num-components (int (py.. (torch/max labels) item))]
+    (vec
+     (for [label (range 1 (inc num-components))]
+       (let [mask (torch/eq labels (float label))
+             ;; Get bounding box for this component
+             indices (torch/nonzero mask)
+             ys (py/get-item indices [(slice nil nil) 0])
+             xs (py/get-item indices [(slice nil nil) 1])
+             min-y (int (py.. (torch/min ys) item))
+             max-y (int (py.. (torch/max ys) item))
+             min-x (int (py.. (torch/min xs) item))
+             max-x (int (py.. (torch/max xs) item))
+             height (inc (- max-y min-y))
+             width (inc (- max-x min-x))
+             ;; Extract the object (with original colors)
+             obj-grid (torch/where mask grid (torch/tensor 0.0 :dtype torch/float))
+             cropped (-> obj-grid
+                         (torch/narrow 0 min-y height)
+                         (torch/narrow 1 min-x width)
+                         (py.. clone))]
+         {:grid cropped
+          :bbox [min-y min-x max-y max-x]
+          :color (max-color-non-zero cropped)})))))
+
+;; ==================== Centroid / Spatial Ordering ====================
+
+(defn color-centroid
+  "Compute the centroid (average x,y position) for a given color in the grid.
+   Returns [x-centroid y-centroid] or nil if color not found."
+  [grid color]
+  (let [positions (positions-of-color grid color)]
+    (when (seq positions)
+      (let [n (count positions)
+            sum-x (reduce + (map first positions))
+            sum-y (reduce + (map second positions))]
+        [(/ sum-x n) (/ sum-y n)]))))
+
+(defn colors-by-centroid-x
+  "Get distinct colors sorted by their x-centroid (left to right).
+   Optionally exclude zero (background)."
+  ([grid] (colors-by-centroid-x grid false))
+  ([grid exclude-zero?]
+   (let [colors (distinct-colors grid)
+         colors (if exclude-zero?
+                  (remove zero? colors)
+                  colors)
+         color-centroids (for [c colors
+                               :let [centroid (color-centroid grid c)]
+                               :when centroid]
+                           {:color c :x (first centroid)})]
+     (mapv :color (sort-by :x color-centroids)))))
+
+(defn colors-by-centroid-y
+  "Get distinct colors sorted by their y-centroid (top to bottom).
+   Optionally exclude zero (background)."
+  ([grid] (colors-by-centroid-y grid false))
+  ([grid exclude-zero?]
+   (let [colors (distinct-colors grid)
+         colors (if exclude-zero?
+                  (remove zero? colors)
+                  colors)
+         color-centroids (for [c colors
+                               :let [centroid (color-centroid grid c)]
+                               :when centroid]
+                           {:color c :y (second centroid)})]
+     (mapv :color (sort-by :y color-centroids)))))
+
+(defn layer-orientation
+  "Detect whether colors form horizontal or vertical layers.
+   Returns :horizontal if layers span left-right (use y-centroid),
+   :vertical if layers span top-bottom (use x-centroid).
+   Based on variance of centroids along each axis."
+  ([grid] (layer-orientation grid true))
+  ([grid exclude-zero?]
+   (let [colors (distinct-colors grid)
+         colors (if exclude-zero?
+                  (remove zero? colors)
+                  colors)
+         centroids (for [c colors
+                         :let [centroid (color-centroid grid c)]
+                         :when centroid]
+                     centroid)
+         xs (map (comp double first) centroids)
+         ys (map (comp double second) centroids)
+         variance (fn [vals]
+                    (when (seq vals)
+                      (let [mean (/ (reduce + vals) (count vals))
+                            sq-diffs (map #(* (- % mean) (- % mean)) vals)]
+                        (double (/ (reduce + sq-diffs) (count vals))))))
+         x-var (or (variance xs) 0.0)
+         y-var (or (variance ys) 0.0)]
+     (if (> x-var y-var)
+       :vertical
+       :horizontal))))
+
+(defn colors-by-dominant-centroid
+  "Get colors sorted by centroid along the dominant axis.
+   Automatically detects layer orientation and returns:
+   - For vertical layers: colors sorted left-to-right (x-centroid)
+   - For horizontal layers: colors sorted top-to-bottom (y-centroid)"
+  ([grid] (colors-by-dominant-centroid grid true))
+  ([grid exclude-zero?]
+   (if (= :vertical (layer-orientation grid exclude-zero?))
+     (colors-by-centroid-x grid exclude-zero?)
+     (colors-by-centroid-y grid exclude-zero?))))
+
+;; ==================== Grid Overlay / Composite ====================
+
+(defn overlay
+  "Overlay grid2 on top of grid1. Non-zero cells in grid2 replace cells in grid1.
+   Grids must have the same dimensions."
+  [grid1 grid2]
+  (torch/where (torch/ne grid2 0) grid2 grid1))
+
+(defn overlay-at
+  "Overlay pattern onto grid at position (x, y).
+   Pattern cells with value 0 are transparent."
+  [grid pattern x y]
+  (let [[grid-h grid-w] (shape grid)
+        [patt-h patt-w] (shape pattern)
+        ;; Calculate visible region
+        x-start (max 0 x)
+        y-start (max 0 y)
+        x-end (min grid-w (+ x patt-w))
+        y-end (min grid-h (+ y patt-h))
+        ;; Pattern offsets (for when pattern is partially off-grid)
+        px-start (- x-start x)
+        py-start (- y-start y)]
+    (if (or (>= x-start x-end) (>= y-start y-end))
+      grid
+      (let [result (py.. grid clone)
+            visible-h (- y-end y-start)
+            visible-w (- x-end x-start)
+            ;; Get visible portion of pattern
+            patt-slice (-> pattern
+                           (torch/narrow 0 py-start visible-h)
+                           (torch/narrow 1 px-start visible-w))
+            ;; Get corresponding region in result
+            grid-slice (-> result
+                           (torch/narrow 0 y-start visible-h)
+                           (torch/narrow 1 x-start visible-w))
+            ;; Overlay: non-zero pattern values replace grid values
+            overlaid (torch/where (torch/ne patt-slice 0) patt-slice grid-slice)]
+        (py.. result
+              (narrow 0 y-start visible-h)
+              (narrow 1 x-start visible-w)
+              (copy_ overlaid))
+        result))))
+
 ;; ==================
 
 ;; perception primitives:

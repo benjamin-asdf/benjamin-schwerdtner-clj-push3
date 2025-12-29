@@ -199,39 +199,37 @@
        (grid/resize-grid-top-left g new-height new-width bg-color))})
 
 (register-instruction
-  {:in
-   [[:push/vector :push/integer]
-    [:push/vector :push/integer]
-    [:push/vector :push/integer]
+ {:in
+  [[:push/vector :push/integer]
+   [:push/vector :push/integer]
+   [:push/vector :push/integer]
 
-    :push/integer :push/integer
-    :push/integer :push/float]
-   :f (fn [_
-           kernel-c
-           kernel-b
-           kernel-a
+   :push/integer :push/integer
+   :push/integer :push/float]
+  :f (fn [_
+          kernel-c
+          kernel-b
+          kernel-a
 
-           mask-color
-           new-color
-           old-color
-           threshold]
-        (when (every? (comp #(= % 3) count)
-                      [kernel-a kernel-b kernel-c])
-          (grid/write-rule {:kernel [kernel-a kernel-b kernel-c]
-                            :mask-color mask-color
-                            :new-color new-color
-                            :old-color old-color
-                            :threshold threshold})))
-   :out :push/ca-rule
-   :sym-name 'grid_make_ca})
+          mask-color
+          new-color
+          old-color
+          threshold]
+       (when (every? (comp #(= % 3) count)
+                     [kernel-a kernel-b kernel-c])
+         (grid/write-rule {:kernel [kernel-a kernel-b kernel-c]
+                           :mask-color mask-color
+                           :new-color new-color
+                           :old-color old-color
+                           :threshold threshold})))
+  :out :push/ca-rule
+  :sym-name 'grid_make_ca})
 
 (register-instruction
  {:sym-name 'grid_ca_apply_rule
   :in [:push/grid :push/ca-rule]
   :out :push/grid
   :f (fn [_ g rule]
-       (def g g )
-       (def rule rule)
        (grid/ca-apply-rule g rule))})
 
 (register-instruction
@@ -341,13 +339,92 @@
   :f (fn [_ g] (grid/positions-of-max-color g))})
 
 (register-instruction
+ {:sym-name 'grid_color_centroid
+  :in [:push/grid :push/integer]
+  :out :push/code
+  :f (fn [_ g color]
+       (or (grid/color-centroid g color) []))
+  :doc "Get the centroid [x y] of a color in the grid."})
+
+(register-instruction
+ {:sym-name 'grid_colors_by_centroid_x
+  :in [:push/grid]
+  :out [:push/vector :push/integer]
+  :f (fn [_ g] (grid/colors-by-centroid-x g))
+  :doc "Get distinct colors sorted by x-centroid (left to right)."})
+
+(register-instruction
+ {:sym-name 'grid_colors_by_centroid_x_nonzero
+  :in [:push/grid]
+  :out [:push/vector :push/integer]
+  :f (fn [_ g] (grid/colors-by-centroid-x g true))
+  :doc "Get distinct non-zero colors sorted by x-centroid (left to right)."})
+
+(register-instruction
+ {:sym-name 'grid_colors_by_centroid_y
+  :in [:push/grid]
+  :out [:push/vector :push/integer]
+  :f (fn [_ g] (grid/colors-by-centroid-y g))
+  :doc "Get distinct colors sorted by y-centroid (top to bottom)."})
+
+(register-instruction
+ {:sym-name 'grid_colors_by_centroid_y_nonzero
+  :in [:push/grid]
+  :out [:push/vector :push/integer]
+  :f (fn [_ g] (grid/colors-by-centroid-y g true))
+  :doc "Get distinct non-zero colors sorted by y-centroid (top to bottom)."})
+
+(register-instruction
+ {:sym-name 'grid_from_vector_column
+  :in [[:push/vector :push/integer]]
+  :out :push/grid
+  :f (fn [_ v]
+       (when (seq v)
+         (grid/grid (mapv vector v))))
+  :doc "Create a column grid (Nx1) from a vector of integers."})
+
+(register-instruction
+ {:sym-name 'grid_from_vector_row
+  :in [[:push/vector :push/integer]]
+  :out :push/grid
+  :f (fn [_ v]
+       (when (seq v)
+         (grid/grid [v])))
+  :doc "Create a row grid (1xN) from a vector of integers."})
+
+(register-instruction
+ {:sym-name 'grid_layer_orientation
+  :in [:push/grid]
+  :out :push/boolean
+  :f (fn [_ g]
+       (= :vertical (grid/layer-orientation g true)))
+  :doc "Returns true if layers are vertical (use x-centroid), false if horizontal."})
+
+(register-instruction
+ {:sym-name 'grid_colors_by_dominant_centroid
+  :in [:push/grid]
+  :out [:push/vector :push/integer]
+  :f (fn [_ g] (grid/colors-by-dominant-centroid g true))
+  :doc "Get colors sorted by dominant axis centroid (auto-detects orientation)."})
+
+(register-instruction
+ {:sym-name 'grid_layer_scan
+  :in [:push/grid]
+  :out :push/grid
+  :f (fn [_ g]
+       (let [colors (grid/colors-by-dominant-centroid g true)]
+         (when (seq colors)
+           (if (= :vertical (grid/layer-orientation g true))
+             (grid/grid [colors])           ; row for vertical layers
+             (grid/grid (mapv vector colors)))))) ; column for horizontal layers
+  :doc "Scan layers and output colors in order. Row for vertical, column for horizontal."})
+
+(register-instruction
  {:sym-name 'grid_max_pool
   :in [:push/grid]
   :out :push/grid
   :f (fn [_ g]
        (grid/max-pool g))})
-
-
 
 ;; ----------------------------
 
@@ -372,7 +449,101 @@
   :f (fn [_ g c]
        (grid/filter-color g c))})
 
+;; ==================== Tiling Instructions ====================
 
+(register-instruction
+ {:sym-name 'grid_tile
+  :in [:push/grid :push/integer :push/integer]
+  :out :push/grid
+  :f (fn [_ g target-height target-width]
+       (grid/tile g target-height target-width))
+  :doc "Tile the pattern to fill a grid of target dimensions."})
+
+(register-instruction
+ {:sym-name 'grid_tile_n
+  :in [:push/grid :push/integer]
+  :out :push/grid
+  :f (fn [_ g n]
+       (grid/tile-n g n))
+  :doc "Tile the pattern n times in each direction."})
+
+;; ==================== Bounding Box / Crop Instructions ====================
+
+(register-instruction
+ {:sym-name 'grid_bounding_box
+  :in [:push/grid]
+  :out :push/code
+  :f (fn [_ g]
+       (or (grid/bounding-box g) []))
+  :doc "Get bounding box [min-y min-x max-y max-x] of non-zero cells."})
+
+(register-instruction
+ {:sym-name 'grid_crop_to_content
+  :in [:push/grid]
+  :out :push/grid
+  :f (fn [_ g]
+       (grid/crop-to-content g))
+  :doc "Crop grid to minimal bounding box of non-zero cells."})
+
+;; ==================== Connected Components Instructions ====================
+
+(register-instruction
+ {:sym-name 'grid_connected_components
+  :in [:push/grid]
+  :out :push/grid
+  :f (fn [_ g]
+       (grid/connected-components g))
+  :doc "Label connected components with unique integers."})
+
+(register-instruction
+ {:sym-name 'grid_extract_objects
+  :in [:push/grid]
+  :out :push/code
+  :f (fn [_ g]
+       (grid/extract-objects g))
+  :doc "Extract all connected objects as a list of {:grid :bbox :color}."})
+
+(register-instruction
+ {:sym-name 'grid_first_object
+  :in [:push/grid]
+  :out :push/grid
+  :f (fn [_ g]
+       (let [objs (grid/extract-objects g)]
+         (if (seq objs)
+           (:grid (first objs))
+           g)))
+  :doc "Extract the first (top-left) connected object from the grid."})
+
+(register-instruction
+ {:sym-name 'grid_largest_object
+  :in [:push/grid]
+  :out :push/grid
+  :f (fn [_ g]
+       (let [objs (grid/extract-objects g)]
+         (if (seq objs)
+           (:grid (apply max-key #(grid/grid-count-non-zero (:grid %)) objs))
+           g)))
+  :doc "Extract the largest connected object from the grid."})
+
+;; ==================== Overlay Instructions ====================
+
+(register-instruction
+ {:sym-name 'grid_overlay
+  :in [:push/grid :push/grid]
+  :out :push/grid
+  :f (fn [_ g1 g2]
+       (if (and (= (grid/shape g1) (grid/shape g2)))
+         (grid/overlay g1 g2)
+         g1))
+  :doc "Overlay g2 on g1 (non-zero cells in g2 replace g1)."})
+
+(register-instruction
+ {:sym-name 'grid_overlay_at
+  :in [:push/grid :push/grid :push/integer :push/integer]
+  :out :push/grid
+  :f (fn [_ base pattern x y]
+       (grid/overlay-at base pattern x y))
+  :doc "Overlay pattern onto base at position (x, y)."})
 
 ;; --------------------------------------------
 
