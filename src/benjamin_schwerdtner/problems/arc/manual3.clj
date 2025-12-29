@@ -181,34 +181,58 @@
 
   ;; ==================== Centroid Ordering Solution ====================
   ;;
-  ;; Using the new grid_colors_by_centroid_x instruction:
+  ;; Task 4be741c5: Color layers (horizontal or vertical bands)
+  ;; Output: colors in order of their spatial position
   ;;
-  ;; The Push3 program to solve this task:
-  ;;
-  ;; grid_colors_by_centroid_x_nonzero  ; get [3 2 1 8] - colors sorted by x-centroid
-  ;; vector_integer_length              ; get count (4)
-  ;; 1                                  ; height = 1
-  ;; grid_new                           ; create 1x4 grid
-  ;; ... or use vector_integer_pushall to build the output grid
+  ;; The grid_layer_scan instruction:
+  ;; 1. Detects layer orientation via centroid variance
+  ;; 2. Sorts colors by dominant axis (x for vertical, y for horizontal)
+  ;; 3. Outputs as row (vertical layers) or column (horizontal layers)
   ;;
 
   ;; Test the centroid functions directly:
-  (grid/color-centroid grid 3)   ;; => left-most centroid
-  (grid/color-centroid grid 2)
-  (grid/color-centroid grid 1)
-  (grid/color-centroid grid 8)   ;; => right-most centroid
+  (grid/color-centroid grid 3)   ;; => [29/17 28/17] left-most centroid
+  (grid/color-centroid grid 2)   ;; => [11/2 15/14]
+  (grid/color-centroid grid 1)   ;; => [115/13 21/13]
+  (grid/color-centroid grid 8)   ;; => [143/12 5/3] right-most centroid
 
-  (grid/colors-by-centroid-x grid true) ;; => [3.0 2.0 1.0 8.0] (sorted left to right)
+  (grid/colors-by-centroid-x grid true)  ;; => [3.0 2.0 1.0 8.0] (sorted left to right)
+  (grid/layer-orientation grid true)     ;; => :vertical (x-variance > y-variance)
 
-  ;; The Push3 solution:
-  (arc/run-push-on-grid-1
-   (-> task :train first :input)
-   '(grid_colors_by_centroid_x_nonzero
-     (vector_integer_length
-      1
-      integer_swap
-      grid_new)
-     (vector_integer_pushall)))
+  ;; ==================== THE SOLUTION ====================
+  ;;
+  ;; One instruction solves the entire task:
+  ;;
+  (arc/run-task task '(grid_layer_scan))
+
+  ;; Result:
+  ;; {:train-success [true true true]
+  ;;  :test-success [true]
+  ;;  :train-out
+  ;;  ({:success? true :out [[2] [8] [5]]        ; horizontal layers -> column
+  ;;    :pair {:output [[2] [8] [5]]}}
+  ;;   {:success? true :out [[4 2 8]]            ; vertical layers -> row
+  ;;    :pair {:output [[4 2 8]]}}
+  ;;   {:success? true :out [[6] [4] [2] [3]]    ; horizontal layers -> column
+  ;;    :pair {:output [[6] [4] [2] [3]]}})
+  ;;  :test-out
+  ;;  ({:success? true :out [[3 2 1 8]]          ; vertical layers -> row
+  ;;    :pair {:output [[3 2 1 8]]}})}
+
+  ;; ==================== Alternative: Manual approach ====================
+  ;;
+  ;; For tasks where you need more control, you can use the component instructions:
+  ;;
+  ;; Vertical layers (like test case):
+  ;; grid_colors_by_centroid_x_nonzero -> [3.0 2.0 1.0 8.0]
+  ;; grid_from_vector_row              -> [[3 2 1 8]]
+  ;;
+  ;; Horizontal layers (like train case 1):
+  ;; grid_colors_by_centroid_y_nonzero -> [2.0 8.0 5.0]
+  ;; grid_from_vector_column           -> [[2] [8] [5]]
+  ;;
+  ;; With rotation for flipped tasks:
+  ;; grid_rotate_90 / grid_rotate_270 before layer_scan if needed
 
   (fhrr/unbind
    (encode-grid grid color-codebook [1 1])
