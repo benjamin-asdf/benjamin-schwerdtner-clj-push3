@@ -136,12 +136,17 @@
 
 ;; Stack manipulation (standard for all types)
 
-(impl/dupper {:sym-name 'char_dup :push-type :push/char})
-(impl/popper {:sym-name 'char_pop :push-type :push/char})
-(impl/swapper {:sym-name 'char_swap :push-type :push/char})
-(impl/rotater {:sym-name 'char_rot :push-type :push/char})
-(impl/flusher {:sym-name 'char_flush :push-type :push/char})
-(impl/yanker {:sym-name 'char_yank :push-type :push/char})
-(impl/yankdupper {:sym-name 'char_yankdup :push-type :push/char})
-(impl/shover {:sym-name 'char_shove :push-type :push/char})
-(impl/stack-depth-impl {:sym-name 'char_stackdepth :push-type :push/char})
+(doseq [[sym-name impl-fn]
+        [['char_stackdepth impl/stack-depth-impl]
+         ['char_pop impl/popper]
+         ['char_dup impl/dupper]
+         ['char_flush impl/flusher]
+         ['char_shove impl/shover]
+         ['char_yank impl/yanker]
+         ['char_yankdup impl/yankdupper]
+         ['char_rot impl/rotater]
+         ['char_swap impl/swapper]
+         ['char_define impl/definer]]]
+  (register-instruction
+   (impl-fn {:sym-name sym-name
+             :push-type :push/char})))

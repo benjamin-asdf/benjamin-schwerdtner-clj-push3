@@ -101,35 +101,18 @@
 
   "
   [x k]
-  ;;
-  ;; x shape:
-  ;; (*, d)
-  ;;
-  ;; k:
-  ;; (k)
-  ;;
-  ;; output shape:
-  ;; (*,k,d)
-  (let [k-tensor (cond (number? k) (torch/tensor [k]
-                                                 :device
-                                                   *torch-device*
-                                                 :dtype torch/float32)
+  ;; Uses torch broadcasting: x and k must be broadcast-compatible.
+  ;; Caller controls dimensions.
+  (let [k-tensor (cond (number? k) k
                        (coll? k) (torch/tensor (vec k)
                                                :device *torch-device*
                                                :dtype torch/float32)
                        :else (py.. k (to :dtype torch/float32)))
-        x (if (= 1 (count (vec (py.. x (size)))))
-            (torch/unsqueeze x 0)
-            x)
         angles (torch/angle x)
-        scaled-angles (torch/einsum "bd,k->bkd" angles k-tensor)
+        scaled-angles (torch/mul angles k-tensor)
         result (torch/complex (torch/cos scaled-angles)
                               (torch/sin scaled-angles))]
-    (py.. result (squeeze -2))))
-
-
-
-
+    result))
 
 (def fpe fractional-power-encoding)
 
@@ -145,7 +128,6 @@
     (fpe a 2.0)
     (fpe a 2.5)])
 
-
   (def x (hd/seed 2))
   (def sp (fpe x (torch/tensor [1 2 3])))
 
@@ -160,8 +142,4 @@
 
   (fpe
    x
-   (torch/tensor [1 2 3])
-   )
-
-
-  )
+   (torch/tensor [1 2 3])))
