@@ -20,42 +20,52 @@
 
     ;; BUTLAST
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_butlast"))
+     {:sym-name (keyword (str "vector_" type-suffix "_butlast"))
       :in [vector-type]
       :out vector-type
       :f (fn [_ v] (vec (butlast v)))})
 
     ;; CONCAT
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_concat"))
+     {:sym-name (keyword (str "vector_" type-suffix "_concat"))
       :in [vector-type vector-type]
       :out vector-type
       :f (fn [_ v1 v2] (vec (concat v2 v1)))})
 
     ;; CONJ
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_conj"))
+     {:sym-name (keyword (str "vector_" type-suffix "_conj"))
       :in [elem-type vector-type]
       :out vector-type
       :f (fn [_ elem v] (conj v elem))})
 
     ;; CONTAINS
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_contains"))
+     {:sym-name (keyword (str "vector_" type-suffix "_contains"))
       :in [elem-type vector-type]
       :out :push/boolean
       :f (fn [_ elem v] (contains? (set v) elem))})
 
     ;; EMPTY?
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_empty?"))
+     {:sym-name (keyword (str "vector_" type-suffix "_empty?"))
       :in [vector-type]
       :out :push/boolean
       :f (fn [_ v] (empty? v))})
 
+    ;; = ; every other stack type has its own equality (`:integer_=`,
+    ;; `:string_=`, ...) and the vector stacks did not, which left a program
+    ;; unable to ask whether two vectors it built are the same - the one
+    ;; comparison a vector problem most obviously needs.
+    (register-instruction
+     {:sym-name (keyword (str "vector_" type-suffix "_="))
+      :in [vector-type vector-type]
+      :out :push/boolean
+      :f (fn [_ v1 v2] (= v1 v2))})
+
     ;; FIRST
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_first"))
+     {:sym-name (keyword (str "vector_" type-suffix "_first"))
       :in [vector-type]
       :out elem-type
       :f (fn [_ v] (if (empty? v)
@@ -69,7 +79,7 @@
 
     ;; INDEXOF
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_indexof"))
+     {:sym-name (keyword (str "vector_" type-suffix "_indexof"))
       :in [elem-type vector-type]
       :out :push/integer
       :f (fn [_ elem v]
@@ -78,7 +88,7 @@
 
     ;; LAST
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_last"))
+     {:sym-name (keyword (str "vector_" type-suffix "_last"))
       :in [vector-type]
       :out elem-type
       :f (fn [_ v] (if (empty? v)
@@ -92,14 +102,14 @@
 
     ;; LENGTH
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_length"))
+     {:sym-name (keyword (str "vector_" type-suffix "_length"))
       :in [vector-type]
       :out :push/integer
       :f (fn [_ v] (count v))})
 
     ;; NTH
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_nth"))
+     {:sym-name (keyword (str "vector_" type-suffix "_nth"))
       :in [:push/integer vector-type]
       :out elem-type
       :f (fn [_ n v]
@@ -114,14 +124,14 @@
 
     ;; OCCURRENCESOF
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_occurrencesof"))
+     {:sym-name (keyword (str "vector_" type-suffix "_occurrencesof"))
       :in [elem-type vector-type]
       :out :push/integer
       :f (fn [_ elem v] (count (filter #(= elem %) v)))})
 
     ;; PUSHALL
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_pushall"))
+     {:sym-name (keyword (str "vector_" type-suffix "_pushall"))
       :in [vector-type]
       :out :state
       :f (fn [state v]
@@ -131,14 +141,14 @@
 
     ;; REMOVE
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_remove"))
+     {:sym-name (keyword (str "vector_" type-suffix "_remove"))
       :in [elem-type vector-type]
       :out vector-type
       :f (fn [_ elem v] (vec (filter #(not= elem %) v)))})
 
     ;; REPLACE
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_replace"))
+     {:sym-name (keyword (str "vector_" type-suffix "_replace"))
       :in [elem-type elem-type vector-type]
       :out vector-type
       :f (fn [_ new-elem old-elem v]
@@ -146,7 +156,7 @@
 
     ;; REPLACEFIRST
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_replacefirst"))
+     {:sym-name (keyword (str "vector_" type-suffix "_replacefirst"))
       :in [elem-type elem-type vector-type]
       :out vector-type
       :f (fn [_ new-elem old-elem v]
@@ -157,21 +167,21 @@
 
     ;; REST
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_rest"))
+     {:sym-name (keyword (str "vector_" type-suffix "_rest"))
       :in [vector-type]
       :out vector-type
       :f (fn [_ v] (vec (rest v)))})
 
     ;; REVERSE
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_reverse"))
+     {:sym-name (keyword (str "vector_" type-suffix "_reverse"))
       :in [vector-type]
       :out vector-type
       :f (fn [_ v] (vec (reverse v)))})
 
     ;; SET
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_set"))
+     {:sym-name (keyword (str "vector_" type-suffix "_set"))
       :in [elem-type :push/integer vector-type]
       :out vector-type
       :f (fn [_ elem n v]
@@ -181,7 +191,7 @@
 
     ;; SUBVEC
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_subvec"))
+     {:sym-name (keyword (str "vector_" type-suffix "_subvec"))
       :in [:push/integer :push/integer vector-type]
       :out vector-type
       :f (fn [_ start-raw stop-raw v]
@@ -191,21 +201,21 @@
 
     ;; TAKE
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_take"))
+     {:sym-name (keyword (str "vector_" type-suffix "_take"))
       :in [:push/integer vector-type]
       :out vector-type
       :f (fn [_ n v] (vec (take n v)))})
 
     ;; EMPTY VECTOR
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_emptyvector"))
+     {:sym-name (keyword (str "vector_" type-suffix "_emptyvector"))
       :in []
       :out vector-type
       :f (fn [_] [])})
 
     ;; FROM LIST (convert code/list to vector)
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_fromlist"))
+     {:sym-name (keyword (str "vector_" type-suffix "_fromlist"))
       :in [:push/code]
       :out vector-type
       :f (fn [_ lst]
@@ -213,7 +223,7 @@
 
     ;; ITERATE
     (register-instruction
-     {:sym-name (symbol (str "vector_" type-suffix "_iterate"))
+     {:sym-name (keyword (str "vector_" type-suffix "_iterate"))
       :in [vector-type :push/exec]
       :out :state
       :f (fn [state v exec-item]
@@ -226,28 +236,28 @@
 
                :else
                (-> state
-                   (stack/push :push/exec (symbol (str "vector_" type-suffix "_iterate")))
+                   (stack/push :push/exec (keyword (str "vector_" type-suffix "_iterate")))
                    (stack/push :push/exec (vec (rest v)))
                    (stack/push :push/exec exec-item)
                    (stack/push elem-type (first v))))))})
 
     ;; Stack manipulation
     (run! register-instruction
-          [(impl/dupper {:sym-name (symbol (str "vector_" type-suffix "_dup"))
+          [(impl/dupper {:sym-name (keyword (str "vector_" type-suffix "_dup"))
                          :push-type vector-type})
-           (impl/popper {:sym-name (symbol (str "vector_" type-suffix "_pop"))
+           (impl/popper {:sym-name (keyword (str "vector_" type-suffix "_pop"))
                          :push-type vector-type})
-           (impl/swapper {:sym-name (symbol (str "vector_" type-suffix "_swap"))
+           (impl/swapper {:sym-name (keyword (str "vector_" type-suffix "_swap"))
                           :push-type vector-type})
-           (impl/rotater {:sym-name (symbol (str "vector_" type-suffix "_rot"))
+           (impl/rotater {:sym-name (keyword (str "vector_" type-suffix "_rot"))
                           :push-type vector-type})
-           (impl/flusher {:sym-name (symbol (str "vector_" type-suffix "_flush"))
+           (impl/flusher {:sym-name (keyword (str "vector_" type-suffix "_flush"))
                           :push-type vector-type})
-           (impl/yanker {:sym-name (symbol (str "vector_" type-suffix "_yank"))
+           (impl/yanker {:sym-name (keyword (str "vector_" type-suffix "_yank"))
                          :push-type vector-type})
-           (impl/yankdupper {:sym-name (symbol (str "vector_" type-suffix "_yankdup"))
+           (impl/yankdupper {:sym-name (keyword (str "vector_" type-suffix "_yankdup"))
                              :push-type vector-type})
-           (impl/shover {:sym-name (symbol (str "vector_" type-suffix "_shove"))
+           (impl/shover {:sym-name (keyword (str "vector_" type-suffix "_shove"))
                          :push-type vector-type})
-           (impl/stack-depth-impl {:sym-name (symbol (str "vector_" type-suffix "_stackdepth"))
+           (impl/stack-depth-impl {:sym-name (keyword (str "vector_" type-suffix "_stackdepth"))
                                    :push-type vector-type})])))

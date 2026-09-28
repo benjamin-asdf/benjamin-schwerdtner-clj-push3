@@ -3,3 +3,20 @@
 /.lsp/
 /.nrepl-port
 /classes/
+/data/
+__pycache__/
+*.pyc
+*.pt
+*.pth
+*.log
+python/bootstrap_output.txt
+python/demo_output.txt
+python/evaluation_plot.png
+python/evaluation_results.csv
+/input_ex*.png
+
+;; vendored reference clone of fargonauts/copycat (has its own .git)
+src/benjamin_schwerdtner/neurosymbolic/copycat/
+
+# Claude Code local state: harness settings and git worktrees
+.claude/

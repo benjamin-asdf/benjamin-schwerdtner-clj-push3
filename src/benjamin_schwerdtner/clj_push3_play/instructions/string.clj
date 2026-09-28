@@ -12,7 +12,7 @@
   - string_from_X: Convert other types to string (e.g., string_from_integer)
 
   Key differences from propeller:
-  - Uses symbols instead of keywords (e.g., 'string_concat vs :string_concat)
+  - Uses keywords for instruction names (e.g., :string_concat)
   - Stack type is :push/string instead of :string
   - State structure uses {:stacks {:push/string [...]}} format"
   (:require
@@ -28,25 +28,25 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_length
+ {:sym-name :string_length
   :in [:push/string]
   :out :push/integer
   :f (fn [_ s] (count s))})
 
 (register-instruction
- {:sym-name 'string_concat
+ {:sym-name :string_concat
   :in [:push/string :push/string]
   :out :push/string
   :f (fn [_ s1 s2] (str s2 s1))})
 
 (register-instruction
- {:sym-name 'string_reverse
+ {:sym-name :string_reverse
   :in [:push/string]
   :out :push/string
   :f (fn [_ s] (apply str (reverse s)))})
 
 (register-instruction
- {:sym-name 'string_=
+ {:sym-name :string_=
   :in [:push/string :push/string]
   :out :push/boolean
   :f (fn [_ s1 s2] (= s1 s2))})
@@ -56,25 +56,25 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_from_integer
+ {:sym-name :string_from_integer
   :in [:push/integer]
   :out :push/string
   :f (fn [_ i] (str i))})
 
 (register-instruction
- {:sym-name 'string_from_float
+ {:sym-name :string_from_float
   :in [:push/float]
   :out :push/string
   :f (fn [_ f] (str f))})
 
 (register-instruction
- {:sym-name 'string_from_boolean
+ {:sym-name :string_from_boolean
   :in [:push/boolean]
   :out :push/string
   :f (fn [_ b] (str b))})
 
 (register-instruction
- {:sym-name 'string_from_char
+ {:sym-name :string_from_char
   :in [:push/char]
   :out :push/string
   :f (fn [_ c] (str c))})
@@ -84,7 +84,7 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_first
+ {:sym-name :string_first
   :in [:push/string]
   :out :push/char
   :f (fn [_ s]
@@ -92,7 +92,7 @@
          (first s)))})
 
 (register-instruction
- {:sym-name 'string_last
+ {:sym-name :string_last
   :in [:push/string]
   :out :push/char
   :f (fn [_ s]
@@ -100,7 +100,7 @@
          (last s)))})
 
 (register-instruction
- {:sym-name 'string_nth
+ {:sym-name :string_nth
   :in [:push/string :push/integer]
   :out :push/char
   :f (fn [_ s i]
@@ -108,13 +108,13 @@
          (nth s (mod i (count s)))))})
 
 (register-instruction
- {:sym-name 'string_rest
+ {:sym-name :string_rest
   :in [:push/string]
   :out :push/string
   :f (fn [_ s] (apply str (rest s)))})
 
 (register-instruction
- {:sym-name 'string_butlast
+ {:sym-name :string_butlast
   :in [:push/string]
   :out :push/string
   :f (fn [_ s] (apply str (butlast s)))})
@@ -124,21 +124,21 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_take
+ {:sym-name :string_take
   :in [:push/string :push/integer]
   :out :push/string
   :f (fn [_ s n]
        (apply str (take (max 0 n) s)))})
 
 (register-instruction
- {:sym-name 'string_drop
+ {:sym-name :string_drop
   :in [:push/string :push/integer]
   :out :push/string
   :f (fn [_ s n]
        (apply str (drop (max 0 n) s)))})
 
 (register-instruction
- {:sym-name 'string_substr
+ {:sym-name :string_substr
   :in [:push/string :push/integer :push/integer]
   :out :push/string
   :f (fn [_ s start end]
@@ -152,19 +152,19 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_empty?
+ {:sym-name :string_empty?
   :in [:push/string]
   :out :push/boolean
   :f (fn [_ s] (empty? s))})
 
 (register-instruction
- {:sym-name 'string_contains
+ {:sym-name :string_contains
   :in [:push/string :push/string]
   :out :push/boolean
   :f (fn [_ s1 s2] (str/includes? s1 s2))})
 
 (register-instruction
- {:sym-name 'string_contains_char
+ {:sym-name :string_contains_char
   :in [:push/string :push/char]
   :out :push/boolean
   :f (fn [_ s c] (str/includes? s (str c)))})
@@ -174,51 +174,68 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_replace
+ {:sym-name :string_replace
   :in [:push/string :push/string :push/string]
   :out :push/string
   :f (fn [_ s match replacement]
        (str/replace s match replacement))})
 
 (register-instruction
- {:sym-name 'string_replace_first
+ {:sym-name :string_replace_first
   :in [:push/string :push/string :push/string]
   :out :push/string
   :f (fn [_ s match replacement]
        (str/replace-first s match replacement))})
 
 (register-instruction
- {:sym-name 'string_replace_char
+ {:sym-name :string_replace_char
   :in [:push/string :push/char :push/char]
   :out :push/string
   :f (fn [_ s old-char new-char]
        (str/replace s old-char new-char))})
 
 (register-instruction
- {:sym-name 'string_remove_char
+ {:sym-name :string_replace_first_char
+  :in [:push/string :push/char :push/char]
+  :out :push/string
+  :f (fn [_ s old-char new-char]
+       (str/replace-first s old-char new-char))})
+
+(register-instruction
+ {:sym-name :string_remove_char
   :in [:push/string :push/char]
   :out :push/string
   :f (fn [_ s c]
        (apply str (filter #(not= c %) s)))})
+
+;; The empty string, as a nullary instruction rather than only as a literal a
+;; problem's ERC list has to remember to include. Several PSB problems have ""
+;; as their answer for some inputs, and a program that has no "" anywhere in
+;; it cannot reach that answer by any amount of mutation.
+(register-instruction
+ {:sym-name :string_empty_string
+  :in []
+  :out :push/string
+  :f (fn [_] "")})
 
 ;; =============================================================================
 ;; Case Operations
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_uppercase
+ {:sym-name :string_uppercase
   :in [:push/string]
   :out :push/string
   :f (fn [_ s] (str/upper-case s))})
 
 (register-instruction
- {:sym-name 'string_lowercase
+ {:sym-name :string_lowercase
   :in [:push/string]
   :out :push/string
   :f (fn [_ s] (str/lower-case s))})
 
 (register-instruction
- {:sym-name 'string_capitalize
+ {:sym-name :string_capitalize
   :in [:push/string]
   :out :push/string
   :f (fn [_ s] (str/capitalize s))})
@@ -228,7 +245,7 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_conj_char
+ {:sym-name :string_conj_char
   :in [:push/string :push/char]
   :out :push/string
   :f (fn [_ s c] (str s c))})
@@ -238,7 +255,7 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_split
+ {:sym-name :string_split
   :in [:push/string]
   :out :state
   :f (fn [state s]
@@ -248,7 +265,7 @@
                  (reverse parts))))})
 
 (register-instruction
- {:sym-name 'string_parse_to_chars
+ {:sym-name :string_parse_to_chars
   :in [:push/string]
   :out :state
   :f (fn [state s]
@@ -261,7 +278,7 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_indexof_char
+ {:sym-name :string_indexof_char
   :in [:push/string :push/char]
   :out :push/integer
   :f (fn [_ s c]
@@ -269,7 +286,7 @@
          (if idx idx -1)))})
 
 (register-instruction
- {:sym-name 'string_occurences_char
+ {:sym-name :string_occurences_char
   :in [:push/string :push/char]
   :out :push/integer
   :f (fn [_ s c]
@@ -280,7 +297,7 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_set_char
+ {:sym-name :string_set_char
   :in [:push/string :push/integer :push/char]
   :out :push/string
   :f (fn [_ s i c]
@@ -294,7 +311,7 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_iterate
+ {:sym-name :string_iterate
   :in [:push/string]
   :out :state
   :f (fn [state s]
@@ -310,7 +327,7 @@
                (stack/push state :push/char (first s))
                ;; Multiple chars - push iteration setup
                (-> state
-                   (stack/push :push/exec 'string_iterate)
+                   (stack/push :push/exec :string_iterate)
                    (stack/push :push/exec (apply str (rest s)))
                    (stack/push :push/exec exec-top)
                    (stack/push :push/char (first s))))))))})
@@ -320,13 +337,13 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_<
+ {:sym-name :string_<
   :in [:push/string :push/string]
   :out :push/boolean
   :f (fn [_ s1 s2] (neg? (compare s1 s2)))})
 
 (register-instruction
- {:sym-name 'string_>
+ {:sym-name :string_>
   :in [:push/string :push/string]
   :out :push/boolean
   :f (fn [_ s1 s2] (pos? (compare s1 s2)))})
@@ -336,19 +353,19 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_trim
+ {:sym-name :string_trim
   :in [:push/string]
   :out :push/string
   :f (fn [_ s] (str/trim s))})
 
 (register-instruction
- {:sym-name 'string_trim_left
+ {:sym-name :string_trim_left
   :in [:push/string]
   :out :push/string
   :f (fn [_ s] (str/triml s))})
 
 (register-instruction
- {:sym-name 'string_trim_right
+ {:sym-name :string_trim_right
   :in [:push/string]
   :out :push/string
   :f (fn [_ s] (str/trimr s))})
@@ -358,7 +375,7 @@
 ;; =============================================================================
 
 (register-instruction
- {:sym-name 'string_rand
+ {:sym-name :string_rand
   :in []
   :out :push/string
   :f (fn [_]
@@ -371,16 +388,16 @@
 ;; =============================================================================
 
 (doseq [[sym-name impl-fn]
-        [['string_stackdepth impl/stack-depth-impl]
-         ['string_pop impl/popper]
-         ['string_dup impl/dupper]
-         ['string_flush impl/flusher]
-         ['string_shove impl/shover]
-         ['string_yank impl/yanker]
-         ['string_yankdup impl/yankdupper]
-         ['string_rot impl/rotater]
-         ['string_swap impl/swapper]
-         ['string_define impl/definer]]]
+        [[:string_stackdepth impl/stack-depth-impl]
+         [:string_pop impl/popper]
+         [:string_dup impl/dupper]
+         [:string_flush impl/flusher]
+         [:string_shove impl/shover]
+         [:string_yank impl/yanker]
+         [:string_yankdup impl/yankdupper]
+         [:string_rot impl/rotater]
+         [:string_swap impl/swapper]
+         [:string_define impl/definer]]]
   (register-instruction
    (impl-fn {:sym-name sym-name
              :push-type :push/string})))

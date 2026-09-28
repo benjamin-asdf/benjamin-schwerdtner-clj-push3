@@ -35,21 +35,24 @@
   "
   [state identifier]
   (->
-   (if
-       ;; When the name-quoted flag is set, a identifier is pushed onto the NAME stack
-    (::name-quoted? state)
+   ;; When the name-quoted flag is set, a identifier is pushed onto the NAME stack
+   (if (::name-quoted? state)
      (stack/push state :push/name identifier)
-
-     (if-let [v (get state :bindings identifier)]
-         ;; the bound value is pushed to the exec stack
+     ;; NOTE this was `(get state :bindings identifier)`, which reads the key
+     ;; :bindings out of the STATE with the identifier as the default - so it
+     ;; returned the whole bindings map, which is non-nil even when empty.
+     ;; Every name therefore took the bound branch and pushed the bindings map
+     ;; itself onto EXEC, and no name ever reached the NAME stack. That made
+     ;; the NAME stack and hence every *_define instruction unreachable.
+     (if-let [v (get (:bindings state) identifier)]
+       ;; the bound value is pushed to the exec stack
        (stack/push state :push/exec v)
-         ;; if the identifier was not encountered before, push it on the NAME stack
+       ;; if the identifier was not encountered before, push it on the NAME stack
        (stack/push state :push/name identifier)))
-
    (assoc ::name-quoted? false)))
 
 (instructions/register-instruction
- {:sym-name 'name_quote
+ {:sym-name :name_quote
   :in []
   :out :state
   :doc "The next name is pushed on the NAME stack, regardless of whether it is bound or not.
@@ -64,28 +67,43 @@ Presumably for redefinition."
 
 (defn execute-1
   [state]
+  ;; NOTE: `*rng*` is bound once per [[execute]] call, not here. Re-seeding on
+  ;; every step made the stochastic instructions (code_rand, integer_rand,
+  ;; mut_drop_rand ...) return the same draw at every step, i.e. constants.
   (if (empty? (-> state
                   :stacks
                   :push/exec))
     state
-    (binding [*rng* (random (:push/random-seed state 0))]
-      (let [item (stack/peek-item state :push/exec)
-            state (stack/pop-item state :push/exec)
+    (let [item (stack/peek-item state :push/exec)
+          state (stack/pop-item state :push/exec)
             ;; every exec pop call is +1 :push/num-executions
-            state (update state :push/num-executions (fnil inc 0))
-            instruction (instructions/instruction item)]
-        (cond (not= instruction :no-instruction)
-              (instructions/execute-instruction state instruction)
-              (name? item) (handle-name state item)
-              (literal? item) (push-to-stack state item)
+          state (update state :push/num-executions (fnil inc 0))
+          instruction (instructions/instruction item)]
+      (cond (not= instruction :no-instruction)
+            (instructions/execute-instruction state instruction)
+            (name? item) (handle-name state item)
+            ;; A NAMED INPUT. `:in1` .. are registered instructions, but a
+            ;; problem may name its inputs instead - the boolean multiplier
+            ;; benchmarks use `:a2 :a1 :a0 :b2 :b1 :b0`, where the name says
+            ;; which bit it is. Any keyword present in the input map resolves
+            ;; to its value, which is Propeller's design
+            ;; (`handle-input-instruction`) and means a problem can introduce
+            ;; input names without registering instructions for them.
+            ;;
+            ;; Checked after the instruction table, so it can never shadow a
+            ;; real instruction, and before `literal?`, which would otherwise
+            ;; push the keyword itself onto CLJ-OBJECT.
+            (and (keyword? item) (contains? (:push/input state) item))
+            (stack/push state :push/exec (get (:push/input state) item))
+            (literal? item) (push-to-stack state item)
               ;; item is a list
-              :else (reduce (fn [state p]
-                              (stack/push state :push/exec p))
-                            state
+            :else (reduce (fn [state p]
+                            (stack/push state :push/exec p))
+                          state
                             ;; reverse, so the first item in
                             ;; the list is the first exec
                             ;; instruction
-                            (reverse item)))))))
+                          (reverse item))))))
 
 (defn execute
   "Entry point for Push3 execution.
@@ -100,6 +118,11 @@ Presumably for redefinition."
   `max-executions`: Stop executions after this count of EXEC stack pops.
 
 
+  Randomness: the stochastic instructions draw from `*rng*`, which is seeded
+  once per call from `:push/random-seed` in `state` (default 0). One binding for
+  the whole run, so the stream advances from step to step while the run as a
+  whole stays reproducible from its seed.
+
   ---------
 
   https://faculty.hampshire.edu/lspector/push3-description.html
@@ -108,15 +131,16 @@ Presumably for redefinition."
 
   ([state program] (execute state program {}))
   ([state program {:keys [max-executions]}]
-   (let [state (execute-load state program)]
-     (loop [state (assoc state :push/num-executions 0)]
-       (if (or (when max-executions
-                 (<= max-executions (:push/num-executions state)))
-               (empty? (-> state
-                           :stacks
-                           :push/exec)))
-         state
-         (recur (execute-1 state)))))))
+   (binding [*rng* (random (:push/random-seed state 0))]
+     (let [state (execute-load state program)]
+       (loop [state (assoc state :push/num-executions 0)]
+         (if (or (when max-executions
+                   (<= max-executions (:push/num-executions state)))
+                 (empty? (-> state
+                             :stacks
+                             :push/exec)))
+           state
+           (recur (execute-1 state))))))))
 
 ;; ---
 
@@ -126,6 +150,15 @@ Presumably for redefinition."
    (config/defaults)
    {:bindings {}
     :instructions (instructions/all-instructions)
+    ;; What `:in1` .. read. Empty unless a problem bound it, see
+    ;; instructions/input_output.clj.
+    :push/input {}
+    ;; Output REGISTERS, written with `:set_cN` and read back with `:cN`. A
+    ;; second output channel next to PRINT, and a different shape: PRINT is an
+    ;; append-only string, this is addressable storage. The boolean circuit
+    ;; benchmarks need it because they have six or eight independent outputs
+    ;; that a program may compute in any order.
+    :push/output {}
     :stacks
     {:push/boolean []
      :push/char []
@@ -134,10 +167,18 @@ Presumably for redefinition."
      :push/exec []
      :push/float []
      :push/integer []
+     ;; Unbounded integers: the busy-beaver / metabiology output channel.
+     :push/bignum []
      :push/name []
+     ;; The output channel. Its top item is everything printed so far, and it
+     ;; starts at "" rather than empty so that "printed nothing" is a value a
+     ;; program can be scored on instead of a missing stack item.
+     :push/print [""]
      :push/string []
      :push/grid []
      :push/ca-rule []
+     ;; Level-1 (meta) substrate: holds the ARC task a solver reasons over.
+     :push/task []
      [:push/vector :push/string] []
      [:push/vector :push/boolean] []
      [:push/vector :push/integer] []

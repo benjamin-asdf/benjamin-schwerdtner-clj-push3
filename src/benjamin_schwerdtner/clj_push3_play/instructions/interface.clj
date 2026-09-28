@@ -4,11 +4,17 @@
    [benjamin-schwerdtner.clj-push3-play.instructions.boolean]
    [benjamin-schwerdtner.clj-push3-play.instructions.code]
    [benjamin-schwerdtner.clj-push3-play.instructions.numbers]
+   [benjamin-schwerdtner.clj-push3-play.instructions.bignum]
    [benjamin-schwerdtner.clj-push3-play.instructions.push-name]
    [benjamin-schwerdtner.clj-push3-play.instructions.mutation]
    [benjamin-schwerdtner.clj-push3-play.instructions.exec]
    [benjamin-schwerdtner.clj-push3-play.instructions.character]
-   [benjamin-schwerdtner.clj-push3-play.instructions.string]))
+   [benjamin-schwerdtner.clj-push3-play.instructions.string]
+   [benjamin-schwerdtner.clj-push3-play.instructions.vector]
+   [benjamin-schwerdtner.clj-push3-play.instructions.input-output]
+   ;; Last: registers across the type list, so the per-type files have to
+   ;; have run first.
+   [benjamin-schwerdtner.clj-push3-play.instructions.polymorphic]))
 
 (defn register-instruction [{:keys [sym-name in out f] :as opts}]
   (comment sym-name in out f)

@@ -1,6 +1,5 @@
 {:deps
- {clj-python/libpython-clj {:mvn/version "2.025"}
-  org.clojure/math.combinatorics {:mvn/version "0.3.0"}}
+ {org.clojure/math.combinatorics {:mvn/version "0.3.0"}}
  :aliases
  {:test
   {:extra-paths ["test"]

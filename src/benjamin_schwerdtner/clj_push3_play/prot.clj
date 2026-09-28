@@ -15,6 +15,10 @@
   (m-typeof-item [_this] :push/integer)
   clojure.lang.BigInt
   (m-typeof-item [_this] :push/integer)
+  ;; Raw BigInteger is the BIGNUM carrier - the unbounded busy-beaver output
+  ;; channel. clojure.lang.BigInt stays an INTEGER (and stays clamped).
+  java.math.BigInteger
+  (m-typeof-item [_this] :push/bignum)
   ;; ------------------
   java.lang.Float
   (m-typeof-item [_this] :push/float)
