@@ -61,7 +61,7 @@ Exploration code lives on other branches (see [[*Experimental work][Experimental
 | ~.../clj_push3_play/instructions/~                      | the instruction table (525 instructions), incl. inputs, PRINT, vectors, BIGNUM, sandbox      |
 | ~.../clj_push3_play/generator.clj~                      | random code generation                                                                       |
 | ~.../clj_push3_play/mutation/~                          | mutation operators, dual (co-evolved) mutation, parasites                                    |
-| ~.../clj_push3_play/configuration/~                     | interpreter parameters (~parser.clj~ is an unfinished stub, not loaded by anything)          |
+| ~.../clj_push3_play/configuration/~                     | interpreter parameters, and ~parser.clj~, a reader for Push3 configuration files          |
 | ~src/benjamin_schwerdtner/problems/propeller/~          | the Propeller/PSB problems as data, a runner, a GP loop, metaevolution and metabiology runs  |
 | ~src/benjamin_schwerdtner/problems/busy_beaver.clj~     | Push3 busy beaver sketch                                                                     |
 | ~src/benjamin_schwerdtner/metabiology/~                 | Chaitin's metabiology: organisms, algorithmic mutation, the three regimes                    |
