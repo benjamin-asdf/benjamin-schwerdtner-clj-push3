@@ -54,22 +54,22 @@ Preliminary interface:
 ~main~ holds the Push3 implementation and the work built directly on it.
 Exploration code lives on other branches (see [[*Experimental work][Experimental work]]).
 
-| Path                                                   | What                                                                                         |
-|--------------------------------------------------------+----------------------------------------------------------------------------------------------|
-| ~src/benjamin_schwerdtner/clj_push3_play/interpreter.clj~ | the interpreter                                                                              |
-| ~.../clj_push3_play/stack/~                             | push state and push values                                                                   |
-| ~.../clj_push3_play/instructions/~                      | the instruction table (525 instructions), incl. inputs, PRINT, vectors, BIGNUM, sandbox      |
-| ~.../clj_push3_play/generator.clj~                      | random code generation                                                                       |
-| ~.../clj_push3_play/mutation/~                          | mutation operators, dual (co-evolved) mutation, parasites                                    |
-| ~.../clj_push3_play/configuration/~                     | interpreter parameters, and ~parser.clj~, a reader for Push3 configuration files          |
-| ~src/benjamin_schwerdtner/problems/propeller/~          | the Propeller/PSB problems as data, a runner, a GP loop, metaevolution and metabiology runs  |
-| ~src/benjamin_schwerdtner/problems/busy_beaver.clj~     | Push3 busy beaver sketch                                                                     |
-| ~src/benjamin_schwerdtner/metabiology/~                 | Chaitin's metabiology: organisms, algorithmic mutation, the three regimes                    |
-| ~src/random_seed/~                                      | seedable randomness                                                                          |
-| ~propeller_problems/~                                   | vendored Propeller source, reference only (see below)                                        |
-| ~docs/~                                                 | [[file:docs/propeller-recook.md][propeller-recook.md]], [[file:docs/metabiology.md][metabiology.md]]                                                  |
-| ~results/~                                              | recorded runs the docs cite                                                                  |
-| ~test/~                                                 | instruction, Propeller parity and metabiology tests                                          |
+| Path                                                      | What                                                                                                 |
+|-----------------------------------------------------------+------------------------------------------------------------------------------------------------------|
+| ~src/benjamin_schwerdtner/clj_push3_play/interpreter.clj~ | the interpreter                                                                                      |
+| ~src/benjamin_schwerdtner/clj_push3_play/stack/~          | push state and push values                                                                           |
+| ~src/benjamin_schwerdtner/clj_push3_play/instructions/~   | the instruction table (525 instructions), incl. inputs, PRINT, vectors, BIGNUM, sandbox              |
+| ~src/benjamin_schwerdtner/clj_push3_play/generator.clj~   | random code generation                                                                               |
+| ~src/benjamin_schwerdtner/clj_push3_play/mutation/~       | mutation operators, dual (co-evolved) mutation, parasites                                            |
+| ~src/benjamin_schwerdtner/clj_push3_play/configuration/~  | interpreter parameters, and ~parser.clj~, a reader for Push3 configuration files                     |
+| ~src/benjamin_schwerdtner/problems/propeller/~            | the Propeller/PSB problems as data, a runner, a GP loop, metaevolution and metabiology runs          |
+| ~src/benjamin_schwerdtner/problems/busy_beaver.clj~       | Push3 busy beaver sketch                                                                             |
+| ~src/benjamin_schwerdtner/metabiology/~                   | Chaitin's metabiology: organisms, algorithmic mutation, the three regimes                            |
+| ~src/random_seed/~                                        | seedable randomness                                                                                  |
+| ~propeller_problems/~                                     | vendored Propeller source, reference only (see below)                                                |
+| ~docs/~                                                   | [[file:docs/propeller-recook.md][propeller-recook.md]], [[file:docs/metabiology.md][metabiology.md]] |
+| ~results/~                                                | recorded runs the docs cite                                                                          |
+| ~test/~                                                   | instruction, Propeller parity and metabiology tests                                                  |
 
 ** Propeller problems
 
@@ -82,15 +82,16 @@ by ~propeller-test/alphabet-test~. Programs read their inputs with
 It is not on the classpath and nothing loads it at runtime. It stays because
 it is the reference the port is checked against: every problem in
 ~problems/propeller/problems.clj~ names its source file there (~:source~), and
-the instruction inventory in ~test/.../problems/propeller_test.clj~ was
+the instruction inventory in ~test/benjamin_schwerdtner/problems/propeller_test.clj~ was
 transcribed from ~propeller_problems/push/instructions/~.
 
 ** Metabiology
 
-[[file:docs/metabiology.md][docs/metabiology.md]]. Push3 programs as Chaitin's software organisms: BIGNUM
-busy-beaver fitness, algorithmic mutation (the mutation is itself a program),
-and the three regimes (exhaustive search / cumulative evolution / intelligent
-design) measured against each other, on the busy beaver and on the PSB suite.
+[[file:docs/metabiology.md][docs/metabiology.md]]. Push3 programs as Chaitin's software organisms: algorithmic
+mutation (the mutation is itself a program) and the three regimes (exhaustive
+search / cumulative evolution / intelligent design) measured against each
+other. Fitness is Chaitin's toy model, the busy beaver (name the biggest number
+you can), and the same regimes also run on the PSB suite.
 
 * Ideas / want to do
 
@@ -98,10 +99,9 @@ design) measured against each other, on the busy beaver and on the PSB suite.
   - split 'mutation' and 'world' genomes.
 - explore symbiogenic algorithms.
 - explore open ended problems and creativity (G. Chaitin's Metabiology but applied).
-  - started: [[file:docs/metabiology.md][docs/metabiology.md]]. Push3 programs as the software animals, BIGNUM
-    busy-beaver fitness, algorithmic mutation, and Chaitin's three regimes
-    (exhaustive search / cumulative evolution / intelligent design) measured
-    against each other. ~src/benjamin_schwerdtner/metabiology/~.
+  - started: [[file:docs/metabiology.md][docs/metabiology.md]]. Push3 programs as the software animals,
+    algorithmic mutation, and Chaitin's three regimes (exhaustive search /
+    cumulative evolution / intelligent design) measured against each other. ~src/benjamin_schwerdtner/metabiology/~.
 - Implement [[https://www.hd-computing.com/][HDC/VSA]] operators.
 - Figure out a hyper dimensional representation of push code so that the same program can be target of
   symbolic and neural / subsymbolic algorithms.

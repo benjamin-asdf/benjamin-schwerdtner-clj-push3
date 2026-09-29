@@ -1,44 +1,35 @@
 # Metabiology on Push3
 
-Chaitin's metabiology (*Proving Darwin*, 2012), implemented with Push3 programs
-as the software animals.
+Gregory Chaitin is one of the founders of algorithmic information theory
+(program-size complexity, the halting probability Ω). *Metabiology* is his
+attempt to give Darwin the same treatment (*Proving Darwin*, 2012): a theory of
+evolution simple enough to prove theorems about.
 
-The four namespaces:
+The premise is that life is software. DNA is a program, so an organism is a
+program, and a mutation is also a program: `A' = M(A)`, with `M` drawn with
+probability decaying exponentially in its size. What evolves is not a string of
+bits under point mutations but a piece of code under algorithmic mutations.
+
+The question is about open-ended creativity: does random mutation plus
+selection keep inventing new things forever, and how fast compared to the
+alternatives? Chaitin answers with a comparison of three search regimes —
+exhaustive search, cumulative evolution, intelligent design — and proves that
+evolution sits much closer to design than to blind search.
+
+To make that provable he needs a fitness that never tops out, and picks a toy
+model for it: the *busy beaver* problem, "name the biggest integer you can".
+It is a stand-in, not the substance; any fitness that rewards unbounded
+mathematical creativity would do. We use it because it is Chaitin's, so the
+results can be held against his bounds.
+
+Here the software organisms are Push3 programs.
 
 | namespace | what it is |
 |---|---|
-| `clj-push3-play.instructions.bignum` | BIGNUM stack: unbounded integers, the busy-beaver output channel |
 | `metabiology.organism` | an organism is a Push3 program; fitness is the number it names |
 | `metabiology.mutation` | algorithmic mutation: the mutation operator is itself a program |
 | `metabiology.evolution` | the three regimes, and their growth curves |
-
-## Why a new stack was needed first
-
-Chaitin's organisms are mathematicians whose fitness is the Busy Beaver
-function: name the biggest integer you can. The fitness must be unbounded —
-that is the entire point, since a fitness with a ceiling has an optimum, and an
-optimum ends the process.
-
-`:push/integer` is clamped to ±1e10 in `stack/pushvalues.clj`. Under that clamp
-the landscape is flat almost immediately:
-
-```clojure
-;; repeated squaring, INTEGER: hits the ceiling in 250 steps and stops
-(2 2 :exec_y (:integer_dup :integer_*))    ;; => 1e10, i.e. 34 bits, forever
-```
-
-So `:push/bignum` carries `java.math.BigInteger`, bounded only by a bit budget
-(`:max-bignum-bits`, default 1e5 ≈ 30k decimal digits). Results wider than the
-budget saturate rather than exhaust the heap. The same organism on BIGNUM:
-
-```clojure
-(2 :bignum_frominteger :exec_y (:bignum_dup :bignum_*))   ;; => 100000 bits
-```
-
-There are deliberately **no BIGNUM literals**: organisms lift values in from
-INTEGER with `:bignum_frominteger`, which keeps programs plain edn. A
-`BigInteger` literal would read back as a `Long` and silently change type when
-an organism is round-tripped through a results file.
+| `clj-push3-play.instructions.bignum` | BIGNUM stack: unbounded integers, see [the note at the end](#appendix-the-bignum-stack) |
 
 ## Organisms and the oracle we don't have
 
@@ -432,3 +423,17 @@ fixed compute budget.
 - **Nested enumeration** for a fair exhaustive baseline.
 - **Raise the ceiling.** Every saturating run is a run whose result is a
   statement about `:max-bignum-bits`, not about evolution.
+
+## Appendix: the BIGNUM stack
+
+The busy beaver toy model needs integers without a ceiling, since a fitness
+with a ceiling has an optimum and an optimum ends the process. `:push/integer`
+is clamped to ±1e10 (`stack/pushvalues.clj`), where repeated squaring
+`(2 2 :exec_y (:integer_dup :integer_*))` stalls at 34 bits within 250 steps.
+So `:push/bignum` carries `java.math.BigInteger`, bounded only by a bit budget
+(`:max-bignum-bits`, default 1e5 ≈ 30k decimal digits) at which results
+saturate instead of exhausting the heap; the same organism on BIGNUM,
+`(2 :bignum_frominteger :exec_y (:bignum_dup :bignum_*))`, reaches the full
+100,000 bits. There are deliberately no BIGNUM literals: organisms lift values
+in with `:bignum_frominteger`, which keeps programs plain edn — a `BigInteger`
+literal would read back as a `Long` when round-tripped through a results file.
