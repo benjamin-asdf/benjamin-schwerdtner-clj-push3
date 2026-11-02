@@ -51,6 +51,13 @@
     (is (= [4] (stack-of (run '(3 :integer_inc)) :push/integer)))
     (is (= [2] (stack-of (run '(3 :integer_dec)) :push/integer)))))
 
+;; `(= [3N] [3])` is true, so the check above cannot see a BigInt. It showed up as the output
+;; "3N" from :integer_print after an :integer_div.
+(deftest integer-div-result-is-a-long-test
+  (let [st (run '(7 2 :integer_div :integer_print))]
+    (is (instance? Long (first (stack-of (run '(7 2 :integer_div)) :push/integer))))
+    (is (= "3" (io/printed st)))))
+
 ;; ---------------------------------------------------------------------------
 ;; INPUT
 ;; ---------------------------------------------------------------------------

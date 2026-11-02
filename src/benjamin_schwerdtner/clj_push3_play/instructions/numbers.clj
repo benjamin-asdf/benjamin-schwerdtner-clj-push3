@@ -117,7 +117,10 @@
           (stack/push state
                       push-type
                       (if (= push-type :push/integer)
-                        (bigint (/ (Math/floor dividend) (Math/floor divisor)))
+                        ;; `long`, not `bigint`: the sanitiser keeps a clojure BigInt as a BigInt
+                        ;; while it is in range, and `pr-str` shows it as "3N", so :integer_print
+                        ;; printed a wrong number. Operands are within +-1e10, the quotient fits.
+                        (long (/ (Math/floor dividend) (Math/floor divisor)))
                         (/ dividend divisor)))))
    :in [push-type push-type]
    :out :state
